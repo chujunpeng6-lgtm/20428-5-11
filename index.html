@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght=400;700&display=swap');
 
         :root {
             --primary: #3b82f6;
@@ -286,15 +286,17 @@
                 </p>
                 
                 <div class="flex flex-wrap justify-center gap-10">
+                    <!-- 下載執行檔按鈕 -->
                     <div class="flex flex-col items-center gap-4">
-                        <button onclick="mockDownload('Project2026_Tool.exe')" class="btn-3d btn-3d-emerald px-12 py-5 text-xl">
+                        <button onclick="startDownloadProcess('Project2026_Tool.exe')" class="btn-3d btn-3d-emerald px-12 py-5 text-xl">
                             <i class="fas fa-rocket mr-3"></i> 下載執行檔
                         </button>
                         <span class="text-xs text-gray-500">Windows x64 / v2026.1.0</span>
                     </div>
                     
+                    <!-- 下載原始碼按鈕 -->
                     <div class="flex flex-col items-center gap-4">
-                        <button onclick="mockDownload('Data_Package_2026.zip')" class="btn-3d btn-3d-slate px-12 py-5 text-xl">
+                        <button onclick="startDownloadProcess('Data_Package_2026.zip')" class="btn-3d btn-3d-slate px-12 py-5 text-xl">
                             <i class="fas fa-file-archive mr-3"></i> 原始碼封裝
                         </button>
                         <span class="text-xs text-gray-500">Latest CSV & Source Files</span>
@@ -397,7 +399,11 @@
             renderTable(filtered);
         }
 
-        function mockDownload(filename) {
+        /**
+         * 啟動下載流程
+         * 同步更新 UI 進度條，並於完成後觸發真實的瀏覽器下載
+         */
+        function startDownloadProcess(filename) {
             const container = document.getElementById('download-progress');
             const bar = document.getElementById('progress-bar');
             const msg = document.getElementById('download-msg');
@@ -405,18 +411,64 @@
             container.classList.remove('hidden');
             let progress = 0;
             msg.innerText = `正在連接 2026 雲端伺服器...`;
+            bar.style.width = `0%`;
             
             const interval = setInterval(() => {
-                progress += Math.random() * 30;
+                progress += Math.random() * 25 + 10; // 模擬隨機下載速度
                 if (progress >= 100) {
                     progress = 100;
                     clearInterval(interval);
-                    msg.innerText = `[SUCCESS] ${filename} 已成功同步至本地端！`;
+                    bar.style.width = `100%`;
+                    msg.innerText = `[SUCCESS] ${filename} 下載包已封裝完成，正透過瀏覽器儲存至本地端...`;
+                    
+                    // 核心修改：模擬完畢，呼叫真實下載邏輯
+                    triggerActualDownload(filename);
                 } else {
                     msg.innerText = `同步中: ${Math.floor(progress)}% - ${filename}`;
+                    bar.style.width = `${progress}%`;
                 }
-                bar.style.width = `${progress}%`;
-            }, 300);
+            }, 250);
+        }
+
+        /**
+         * 觸發瀏覽器下載
+         * @param {string} filename 檔案名稱
+         */
+        function triggerActualDownload(filename) {
+            // 方案 A：如果您未來把實際的 exe/zip 放在 GitHub 專案的根目錄，直接啟用這行即可：
+            // window.location.href = './' + filename;
+
+            // 方案 B（當前運行，完美靜態模擬）：動態產生具有實質內容的虛擬檔案，供評審或使用者體驗真實下載！
+            let blobContent;
+            let mimeType;
+
+            if (filename.endsWith('.exe')) {
+                // 產生一個模擬執行檔的二進位 dummy 檔案（寫入說明文字）
+                const infoText = "這是 2026 年排球租借費用大百科專案執行檔。由於這是靜態展示，此檔案為虛擬占位符（Dummy Package）。";
+                const encoder = new TextEncoder();
+                blobContent = encoder.encode(infoText);
+                mimeType = "application/x-msdownload";
+            } else {
+                // 產生一個模擬 ZIP 的虛擬文字包
+                blobContent = "排球專案數據庫：\n新店國民運動中心: NT$ 2050/hr\n臺中北區運動中心: NT$ 1650/hr\n...";
+                mimeType = "application/zip";
+            }
+
+            const blob = new Blob([blobContent], { type: mimeType });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            
+            // 點擊並釋放記憶體
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // 下載成功後的延伸提示
+            setTimeout(() => {
+                const msg = document.getElementById('download-msg');
+                msg.innerHTML = `[SUCCESS] <span class="text-white font-bold">${filename}</span> 已成功儲存！若為 GitHub 真實專案部署，請將實體檔案放置於 GitHub 專案目錄下。`;
+            }, 1000);
         }
 
         window.onload = () => {
